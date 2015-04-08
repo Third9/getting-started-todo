@@ -11,7 +11,8 @@
   var db = new PouchDB('todos');
 
   // Replace with remote instance, this just replicates to another local instance.
-  var remoteCouch = 'todos_remote';
+  var SYNC_GATEWAY_URL = 'http://127.0.0.1:4984/todos/';
+  var remoteCouch = SYNC_GATEWAY_URL;
 
   db.changes({
     since: 'now',
@@ -23,7 +24,10 @@
     var todo = {
       _id: new Date().toISOString(),
       title: text,
-      checked: false
+      checked: false,
+      type: 'task',
+      list_id: '123',
+      created_at: new Date()
     };
     db.put(todo, function callback(err, result) {
       if (!err) {
@@ -71,7 +75,38 @@
 
   // CODE MISSING FOR ToDoLite syncing
 
+  function migrateGuestToUser(userId) {
+    var profile = {
+      _id: '123',
+      type: 'list',
+      title: 'TodoMVC list',
+      owner: 'p:' + userId
+    };
+    db.put(profile, function(err, result) {
+      if (!err) {
+        console.log('Successfully saved user list');
+      }
+    })
+  }
 
+  function startSyncGatewaySession(accessToken) {
+    var request = new XMLHttpRequest();
+    request.open('POST', SYNC_GATEWAY_URL + '_facebook', true);
+    request.setRequestHeader('Content-Type', 'application/json');
+    request.onreadystatechange = function() {
+      if (request.readyState == 4 && request.status == 200) {
+        console.log('New SG session, starting sync!');
+        sync();
+      }
+    };
+    request.withCredentials = true;
+    request.send(JSON.stringify({"access_token": accessToken}));
+  }
+
+  function startSessionAndSync(accessToken, userId) {
+    migrateGuestToUser(userId);
+    startSyncGatewaySession(accessToken);
+  }
 
   // EDITING STARTS HERE (you dont need to edit anything below this line)
 
