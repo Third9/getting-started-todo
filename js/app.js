@@ -24,7 +24,9 @@
     var todo = {
       _id: new Date().toISOString(),
       title: text,
-      completed: false
+      completed: false,
+      type: 'task',
+      list_id: 'list-ODW4-9SU4-P4J3-BX8S'
     };
     db.put(todo, function callback(err, result) {
       if (!err) {
@@ -72,7 +74,53 @@
 
   // CODE MISSING FOR ToDoLite syncing
 
+  function createUserProfile(userId) {
+    var profile = {
+      _id: 'profile:' + userId,
+      type: 'profile'
+    };
+    db.put(profile, function(err, result) {
+      if (!err) {
+        console.log('Successfully saved the user profile');
+      }
+    })
+  }
 
+  function migrateGuestToUser(userId) {
+    var profile = {
+      _id: 'list-ODW4-9SU4-P4J3-BX8S',
+      type: 'list',
+      title: 'TodoMVC list',
+      owner: userId
+    };
+    db.put(profile, function(err, result) {
+      if (!err) {
+        console.log('Successfully saved user list');
+      }
+    })
+  }
+
+  function startSyncGatewaySession(accessToken) {
+    var request = new XMLHttpRequest();
+    request.open('POST', SYNC_GATEWAY_URL + '/_facebook', true);
+    request.setRequestHeader('Content-Type', 'application/json');
+    request.onreadystatechange = function() {
+      if (request.readyState == 4 && request.status == 200) {
+        console.log('New SG session, starting sync!');
+        sync();
+      } else {
+
+      }
+    };
+    request.withCredentials = true;
+    request.send(JSON.stringify({"access_token": accessToken}));
+  }
+
+  function startSessionAndSync(accessToken, userId) {
+    createUserProfile(userId);
+    migrateGuestToUser(userId);
+    startSyncGatewaySession(accessToken);
+  }
 
   // EDITING STARTS HERE (you dont need to edit anything below this line)
 
